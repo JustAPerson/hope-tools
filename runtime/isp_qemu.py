@@ -20,17 +20,18 @@ run_cmd = "qemu-system-riscv32"
 
 logger = logging.getLogger()
 
-def qemuOptions(exe_path, run_dir, extra, gdb_port=0):
+def qemuOptions(exe_path, run_dir, uart_log, extra, gdb_port=0):
     opts = [ "-nographic",
              "-machine", "sifive_e",
              "-kernel", exe_path,
-             "-serial", "file:{}".format(os.path.join(run_dir, uart_log_file)),
              "-D", os.path.join(run_dir, status_log_file),
              "-singlestep", #need to instrument every target instruction
              "-d", "nochain",
              "--policy-validator-cfg",
              "yaml-cfg={}".format(os.path.join(run_dir, "validator_cfg.yml"))]
 
+    if uart_log is True:
+        opts += ["-serial", "file:{}".format(os.path.join(run_dir, uart_log_file))]
     if gdb_port is not 0:
         opts += ["-S", "-gdb", "tcp::{}".format(gdb_port)]
 
@@ -50,11 +51,11 @@ def watchdog():
     logger.warn("Watchdog timeout")
     process_exit = True
 
-def launchQEMU(exe_path, run_dir, policy_dir, runtime, extra):
+def launchQEMU(exe_path, run_dir, policy_dir, runtime, uart_log, extra):
     global process_exit
     terminate_msg = isp_utils.terminateMessage(runtime)
     sim_log = open(os.path.join(run_dir, sim_log_file), "w+")
-    opts = qemuOptions(exe_path, run_dir, extra)
+    opts = qemuOptions(exe_path, run_dir, uart_log, extra)
 
     try:
         logger.debug("Running qemu cmd:{}\n".format(str([run_cmd] + opts)))
@@ -88,26 +89,29 @@ def launchQEMU(exe_path, run_dir, policy_dir, runtime, extra):
         logger.error("QEMU run failed for exception {}.\n".format(e))
         raise
 
-def launchQEMUDebug(exe_path, run_dir, policy_dir, gdb_port, extra):
+def launchQEMUDebug(exe_path, run_dir, policy_dir, gdb_port, uart_log, extra):
     sim_log = open(os.path.join(run_dir, sim_log_file), "w+")
-    opts = qemuOptions(exe_path, run_dir, extra, gdb_port)
+    opts = qemuOptions(exe_path, run_dir, uart_log, extra, gdb_port)
     logger.debug("Running qemu cmd:{}\n", str([run_cmd] + opts))
     rc = subprocess.Popen([run_cmd] + opts,
                           env={"LD_LIBRARY_PATH": policy_dir,
                                "PATH": os.environ["PATH"]}, stdout=sim_log)
     rc.wait()
 
-def runSim(exe_path, run_dir, policy_dir, runtime, gdb_port, extra):
+def runSim(exe_path, run_dir, policy_dir, runtime, gdb_port, uart_log, extra):
     try:
         logger.debug("Begin QEMU test... (timeout: {})".format(timeout_seconds))
         if gdb_port is not 0:
-            launchQEMUDebug(exe_path, run_dir, policy_dir, gdb_port, extra)
+            launchQEMUDebug(exe_path, run_dir, policy_dir, gdb_port, uart_log, extra)
         else:
             wd = threading.Thread(target=watchdog)
             wd.start()
-            qemu = threading.Thread(target=launchQEMU, args=(exe_path, run_dir, policy_dir, runtime, extra))
+            qemu = threading.Thread(target=launchQEMU, args=(exe_path, run_dir, policy_dir, runtime, uart_log, extra))
             qemu.start()
             wd.join()
             qemu.join()
     finally:
         pass
+
+
+

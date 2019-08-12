@@ -37,7 +37,7 @@ class retVals:
 #  tag_only - run the tagging tools without running the simulator
 #  extra - extra command line arguments to the simulator
 
-def runSim(exe_path, policy_dir, run_dir, sim, runtime, rule_cache, gdb, tag_only, soc_cfg, extra):
+def runSim(exe_path, policy_dir, run_dir, sim, runtime, rule_cache, gdb, tag_only, soc_cfg, extra, uart_log):
     exe_name = os.path.basename(exe_path)
 
     if not os.path.isfile(exe_path):
@@ -63,7 +63,7 @@ def runSim(exe_path, policy_dir, run_dir, sim, runtime, rule_cache, gdb, tag_onl
         return retVals.SUCCESS
 
     sim_module = __import__("isp_" + sim)
-    sim_module.runSim(exe_path, run_dir, policy_dir, runtime, gdb, extra)
+    sim_module.runSim(exe_path, run_dir, policy_dir, runtime, gdb, uart_log, extra)
 
     return retVals.SUCCESS
 

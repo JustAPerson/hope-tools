@@ -47,6 +47,9 @@ def main():
     parser.add_argument("-u", "--uart", action="store_true", help='''
     Forward UART output from the simulator to stdout
     ''')
+    parser.add_argument("-U", "--uart-nolog", action="store_true", help='''
+    Disable writing UART output to file (needed for QEMU interactive serial emulation)
+    ''')
     parser.add_argument("-g", "--gdb", type=int, default=0, help='''
     Start the simulator in gdbserver mode on specified port
     ''')
@@ -129,7 +132,8 @@ def main():
                             args.gdb,
                             args.tag_only,
                             soc_path,
-                            args.extra)
+                            args.extra,
+                            (not args.uart_nolog))
 
     if result != isp_run.retVals.SUCCESS:
         logger.error(result)
